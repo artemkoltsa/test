@@ -82,10 +82,9 @@ def switch_state(request):
 def collect_profile():
     profile = {}
 
-    text = random.choice(['Привет! Кого ты ищешь - девушку или парня?',
-                   'Ну что, кого ищем? Девушку или парня?',
-                   'Кто тебя интересует девушки или парни?'])
-    req = yield {'text': text}
+    welcomeQuery = random.choice(['Привет! Кого ты ищешь - девушку или парня?',
+                                  'Привет, кого будем искать? Девушку или парня?'])
+    req = yield {'text': welcomeQuery}
     while True:
         lemmas = req['lemmas']
 
@@ -99,13 +98,17 @@ def collect_profile():
         req = yield {'text': 'Скажи или слово "девушка", или слово "парень"'}
     profile['gender'] = gender
 
-    
-    req = yield {'text': 'Я смогу тебе помочь! Как тебя зовут?'}
+
+
+    nameQuery = random.choice(['Я смогу тебе помочь! Как тебя зовут?',
+                               'Отлично! Назови свое имя.'])
+    req = yield {'text': nameQuery}
     profile['name'] = req['lemmas'][-1]
 
 
-
-    req = yield {'text': 'Сколько тебе лет?'}
+    ageQuery = random.choice(['Сколько тебе лет?',
+                              'Назови свой возраст.'])
+    req = yield {'text': ageQuery}
     while True:
         utterance = req['utterance']
 
@@ -115,7 +118,7 @@ def collect_profile():
         age = int(utterance)
 
         if age < 18:
-            req = yield {'text': 'Навык доступен только для людей не младше 18 лет, сорян :(',
+            req = yield {'text': 'Навык доступен только для людей не младше 18 лет, сорри :(',
                          'end_session': True}
             return
         if age > 100:
@@ -131,7 +134,7 @@ def collect_profile():
         if city_repository.try_get_city(utterance) is not None:
             break
 
-        req = yield {'text': 'Я не знаю такого города. Назови город ещё раз'}
+        req = yield {'text': 'Я не знаю такого города. Назови город ещё раз.'}
     profile['city'] = utterance
 
     req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}

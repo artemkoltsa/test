@@ -152,24 +152,24 @@ def collect_profile():
     req = yield {'text': 'Какую музыку ты слушаешь? Назови пару исполнителей.'}
     profile['music'] = filter_stop_words(req['lemmas'])
 
-    req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
-                         'Я проигнорирую все слова в твоей фразе, кроме чисел.'}
-    while True:
-        utterance = req['utterance']
-        phone = re.sub(r'\D', r'', utterance)
-
-        req = yield {'text': 'Я правильно распознала твой номер телефона?'}
-        lemmas = req['lemmas']
-
-        if any(w in lemmas for w in ['да', 'правильно']):
-            break
-
-        req = yield {'text': 'Скажи свой номер ещё раз'}
-    profile['phone'] = phone
-
     candidates = [value for id, value in profiles.items()
                   if get_match_score(profile, value) > 0]
     if not candidates:
+        req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
+                             'Я проигнорирую все слова в твоей фразе, кроме чисел.'}
+        while True:
+            utterance = req['utterance']
+            phone = re.sub(r'\D', r'', utterance)
+
+            req = yield {'text': 'Я правильно распознала твой номер телефона?'}
+            lemmas = req['lemmas']
+
+            if any(w in lemmas for w in ['да', 'правильно']):
+                break
+
+            req = yield {'text': 'Скажи свой номер ещё раз'}
+        profile['phone'] = phone
+
         user_id = req['session']['user_id']
         with profile_lock:
             profiles[user_id] = profile

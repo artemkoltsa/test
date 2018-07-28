@@ -149,7 +149,7 @@ def collect_profile():
         utterance = req['utterance']
         phone = re.sub(r'\D', r'', utterance)
 
-        req = yield {'text': '{}. Я правильно распознала твой номер телефона?'.format(phone)}
+        req = yield {'text': 'Я правильно распознала твой номер телефона?'}
         lemmas = req['lemmas']
 
         if any(w in lemmas for w in ['да', 'правильно']):

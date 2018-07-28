@@ -13,19 +13,17 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 
-# Задаем параметры приложения Flask.
 @app.route("/", methods=['POST'])
 def main():
-    # Функция получает тело запроса и возвращает ответ.
     logging.info('Request: %r', request.json)
 
-    response = switch_state(request.json)
+    result = switch_state(request.json)
     response = {
         'version': request.json['version'],
         'session': request.json['session'],
         'response': {
-            'end_session': False,
-            'text': response['text'],
+            'end_session': result.get('end_session', False),
+            'text': result['text'],
         }
     }
 
@@ -88,7 +86,8 @@ def collect_profile(profile):
         age = int(utterance)
 
         if age < 18:
-            yield {'text': 'Навык доступен только для людей не младше 18 лет :('}
+            yield {'text': 'Навык доступен только для людей не младше 18 лет :(',
+                   'end_session': True}
             return
         if age > 100:
             yield {'text': 'Некорректный возраст, назови возраст ещё раз'}
@@ -100,3 +99,15 @@ def collect_profile(profile):
     utterance = req['utterance']
     # TODO: Проверить город
     profile['city'] = utterance
+
+    req = yield {'text': 'Где ты работаешь или учишься?'}
+    profile['occupation'] = req['lemmas']
+
+    req = yield {'text': 'Какие у тебя хобби?'}
+    profile['hobbies'] = req['lemmas']
+
+    req = yield {'text': 'Какую музыку ты слушаешь? Назови жанр и пару исполнителей.'}
+    profile['music'] = req['lemmas']
+
+    yield {'text': 'Всё понятно',
+           'end_session': True}

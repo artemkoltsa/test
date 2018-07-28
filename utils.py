@@ -5,3 +5,7 @@ class CityRepository:
 
     def try_get_city(self, city_name):
         return city_name if city_name.lower() in self.city_list else None
+
+
+def filter_stop_words(lemmas):
+    return [item for item in lemmas if len(item) > 3]

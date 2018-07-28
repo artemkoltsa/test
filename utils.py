@@ -3,5 +3,9 @@ class CityRepository:
         with open('files/cities.txt') as f:
             self.city_list = set(city.lower().strip() for city in f.readlines())
 
-    def try_get_city(self, city_name):
-        return city_name if city_name.lower() in self.city_list else None
+    def try_get_city(self, sentence):
+        for word in sentence.split():
+            if word.lower() in self.city_list:
+                return word
+
+        return None

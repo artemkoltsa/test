@@ -188,19 +188,19 @@ def collect_profile():
     best_candidate = max(candidates, key=lambda value: get_match_score(profile, value))
     if gender == 'male':
         text = 'Кажется, я знаю одну девушку, которая может тебе понравиться. Её зовут {}, ей {}. ' \
-               'Ты можешь позвонить ей по номеру: {}. '.format(
+               'Ты можешь позвонить ей по номеру: {}.'.format(
             best_candidate['name'].capitalize(), best_candidate['age'], best_candidate['phone'])
     else:
         text = 'Кажется, я знаю одного парня, который может тебе понравиться. Его зовут {}, ему {}. ' \
-               'Ты можешь позвонить ему по номеру: {}. '.format(
+               'Ты можешь позвонить ему по номеру: {}.'.format(
             best_candidate['name'].capitalize(), best_candidate['age'], best_candidate['phone'])
 
     commons = set(profile['hobbies']) & set(best_candidate['hobbies'])
     if commons:
-        text += 'У вас есть общие хобби: {}. '.format(', '.join(commons))
+        text += '\n\nУ вас есть общие хобби: {}.'.format(', '.join(commons))
 
     commons = set(profile['music']) & set(best_candidate['music'])
     if commons:
-        text += 'Вы любите одну и ту же музыку, например: {}. '.format(', '.join(commons))
+        text += '\n\nВы любите одну и ту же музыку, например: {}.'.format(', '.join(commons))
 
     req = yield {'text': text, 'end_session': True}

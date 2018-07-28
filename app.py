@@ -1,13 +1,18 @@
 import json
 import logging
 import re
+import threading
 
 import pymorphy2
 from flask import Flask, request
 
+from utils import CityRepository
+
 
 morph = pymorphy2.MorphAnalyzer()
 app = Flask(__name__)
+
+city_repository = CityRepository()
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -37,26 +42,31 @@ def main():
 
 
 profiles = {}
+profile_lock = threading.RLock()
+
 sessions = {}
+session_lock = threading.RLock()
 
 
 def switch_state(request):
     user_id = request['session']['user_id']
-    if user_id not in profiles:
-        profiles[user_id] = {}
-    profile = request['profile'] = profiles[user_id]
+    with profile_lock:
+        if user_id not in profiles:
+            profiles[user_id] = {}
+        profile = request['profile'] = profiles[user_id]
 
     utterance = request['utterance'] = request['request']['original_utterance']
     words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
     request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
 
     session_id = request['session']['session_id']
-    if session_id not in sessions:
-        state = sessions[session_id] = collect_profile(profile)
-        response = state.send(None)
-    else:
-        state = sessions[session_id]
-        response = state.send(request)
+    with session_lock:
+        if session_id not in sessions:
+            state = sessions[session_id] = collect_profile(profile)
+            request = None
+        else:
+            state = sessions[session_id]
+    response = state.send(request)
 
     return response
 
@@ -100,8 +110,13 @@ def collect_profile(profile):
     profile['age'] = age
 
     req = yield {'text': 'В каком городе ты живёшь?'}
-    utterance = req['utterance']
-    # TODO: Проверить город
+    while True:
+        utterance = req['utterance']
+
+        if city_repository.try_get_city(utterance) is not None:
+            break
+
+        req = yield {'text': 'Я не знаю такого города. Назови город ещё раз'}
     profile['city'] = utterance
 
     req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}

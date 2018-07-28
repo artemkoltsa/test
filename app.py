@@ -195,11 +195,11 @@ def collect_profile():
                'Ты можешь позвонить ему по номеру: {}. '.format(
             best_candidate['name'].capitalize(), best_candidate['age'], best_candidate['phone'])
 
-    commons = profile['hobbies'] & best_candidate['hobbies']
+    commons = set(profile['hobbies']) & set(best_candidate['hobbies'])
     if commons:
         text += 'У вас есть общие хобби: {}. '.format(', '.join(commons))
 
-    commons = profile['music'] & best_candidate['music']
+    commons = set(profile['music']) & set(best_candidate['music'])
     if commons:
         text += 'Вы любите одну и ту же музыку, например: {}. '.format(', '.join(commons))
 

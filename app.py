@@ -81,7 +81,7 @@ def switch_state(request):
 def collect_profile():
     profile = {}
 
-    req = yield {'text': 'Привет :) Кого ты ищешь - девушку или парня?'}
+    req = yield {'text': 'Привет! :) Кого ты ищешь - девушку или парня?'}
     while True:
         lemmas = req['lemmas']
 

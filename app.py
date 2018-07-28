@@ -1,12 +1,17 @@
 import json
 import logging
+import os
 import re
 import threading
 
 import pymorphy2
 from flask import Flask, request
 
+from match import get_match_score
 from utils import CityRepository
+
+
+PROFILE_FILE = 'profiles.json'
 
 
 morph = pymorphy2.MorphAnalyzer()
@@ -41,7 +46,15 @@ def main():
     )
 
 
-profiles = {}
+def load_profiles():
+    if not os.path.isfile(PROFILE_FILE):
+        return {}
+
+    with open(PROFILE_FILE) as f:
+        return json.load(f)
+
+
+profiles = load_profiles()
 profile_lock = threading.RLock()
 
 sessions = {}
@@ -49,20 +62,14 @@ session_lock = threading.RLock()
 
 
 def switch_state(request):
-    user_id = request['session']['user_id']
-    with profile_lock:
-        if user_id not in profiles:
-            profiles[user_id] = {}
-        profile = request['profile'] = profiles[user_id]
-
-    utterance = request['utterance'] = request['request']['original_utterance']
+    utterance = request['utterance'] = request['request']['original_utterance'].rstrip('.')
     words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
     request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
 
     session_id = request['session']['session_id']
     with session_lock:
         if session_id not in sessions:
-            state = sessions[session_id] = collect_profile(profile)
+            state = sessions[session_id] = collect_profile()
             request = None
         else:
             state = sessions[session_id]
@@ -71,16 +78,18 @@ def switch_state(request):
     return response
 
 
-def collect_profile(profile):
-    req = yield {'text': 'Кого ты ищешь - девушку или парня?'}
+def collect_profile():
+    profile = {}
+
+    req = yield {'text': 'Привет :) Кого ты ищешь - девушку или парня?'}
     while True:
         lemmas = req['lemmas']
 
         if any(w in lemmas for w in ['парень', 'молодой', 'мч', 'мужчина', 'мальчик']):
-            gender = 'male'
+            gender = 'female'
             break
         elif any(w in lemmas for w in ['девушка', 'женщина', 'тёлка', 'телок', 'девочка']):
-            gender = 'female'
+            gender = 'male'
             break
 
         req = yield {'text': 'Скажи или слово "девушка", или слово "парень"'}
@@ -100,7 +109,7 @@ def collect_profile(profile):
         age = int(utterance)
 
         if age < 18:
-            req = yield {'text': 'Навык доступен только для людей не младше 18 лет :(',
+            req = yield {'text': 'Навык доступен только для людей не младше 18 лет, сорян :(',
                          'end_session': True}
             return
         if age > 100:
@@ -109,7 +118,7 @@ def collect_profile(profile):
         break
     profile['age'] = age
 
-    req = yield {'text': 'В каком городе ты живёшь?'}
+    req = yield {'text': 'А в каком городе ты живёшь?'}
     while True:
         utterance = req['utterance']
 
@@ -122,10 +131,10 @@ def collect_profile(profile):
     req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}
     profile['occupation'] = req['lemmas']
 
-    req = yield {'text': 'Какие у тебя хобби?'}
+    req = yield {'text': 'Чем ты занимаешься в свободное время? Какие у тебя хобби?'}
     profile['hobbies'] = req['lemmas']
 
-    req = yield {'text': 'Какую музыку ты слушаешь? Назови жанр и пару исполнителей.'}
+    req = yield {'text': 'Какую музыку ты слушаешь? Назови пару исполнителей.'}
     profile['music'] = req['lemmas']
 
     req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки".'}
@@ -140,5 +149,31 @@ def collect_profile(profile):
             break
     profile['phone'] = phone
 
-    yield {'text': 'Всё понятно',
-           'end_session': True}
+    user_id = req['session']['user_id']
+    with profile_lock:
+        profiles[user_id] = profile
+        with open('profiles.json', 'w') as f:
+            json.dump(profiles, f)
+
+    candidates = [value for id, value in profiles.items()
+                  if user_id != id and get_match_score(profile, value) > 0]
+    if not candidates:
+        if gender == 'male':
+            text = 'Ура, я добавила тебя в базу! ' + \
+                   'Как только навыком воспользуется подходящая тебе девушка, я сообщу ей твои контакты!'
+        else:
+            text = 'Ура, я добавила тебя в базу! ' + \
+                   'Как только навыком воспользуется подходящий тебе парень, я сообщу ему твои контакты!'
+        req = yield {'text': text, 'end_session': True}
+        return
+
+    best_candidate = max(candidates, key=lambda value: get_match_score(profile, value))
+    if gender == 'male':
+        text = 'Кажется, я знаю одну девушку, которая может тебе понравиться. Её зовут {}, ей {}. ' \
+               'Ты можешь позвонить ей по номеру: {}'.format(
+            best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+    else:
+        text = 'Кажется, я знаю одного парня, который может тебе понравиться. Его зовут {}, ему {}. ' \
+               'Ты можешь позвонить ему по номеру: {}'.format(
+            best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+    req = yield {'text': text, 'end_session': True}

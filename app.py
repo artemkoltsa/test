@@ -76,6 +76,10 @@ def collect_profile(profile):
         req = yield {'text': 'Скажи или слово "девушка", или слово "парень"'}
     profile['gender'] = gender
 
+    req = yield {'text': 'Я смогу тебе помочь! Как тебя зовут?'}
+    utterance = req['utterance']
+    profile['name'] = utterance
+
     req = yield {'text': 'Сколько тебе лет?'}
     while True:
         utterance = req['utterance']
@@ -86,11 +90,11 @@ def collect_profile(profile):
         age = int(utterance)
 
         if age < 18:
-            yield {'text': 'Навык доступен только для людей не младше 18 лет :(',
-                   'end_session': True}
+            req = yield {'text': 'Навык доступен только для людей не младше 18 лет :(',
+                         'end_session': True}
             return
         if age > 100:
-            yield {'text': 'Некорректный возраст, назови возраст ещё раз'}
+            req = yield {'text': 'Некорректный возраст, назови возраст ещё раз'}
             continue
         break
     profile['age'] = age
@@ -100,7 +104,7 @@ def collect_profile(profile):
     # TODO: Проверить город
     profile['city'] = utterance
 
-    req = yield {'text': 'Где ты работаешь или учишься?'}
+    req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}
     profile['occupation'] = req['lemmas']
 
     req = yield {'text': 'Какие у тебя хобби?'}
@@ -108,6 +112,18 @@ def collect_profile(profile):
 
     req = yield {'text': 'Какую музыку ты слушаешь? Назови жанр и пару исполнителей.'}
     profile['music'] = req['lemmas']
+
+    req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки".'}
+    while True:
+        utterance = req['utterance']
+        phone = re.sub(r'\D', r'', utterance)
+
+        req = yield {'text': 'Я правильно распознала твой номер телефона?'}
+        lemmas = req['lemmas']
+
+        if any(w in lemmas for w in ['да', 'правильно']):
+            break
+    profile['phone'] = phone
 
     yield {'text': 'Всё понятно',
            'end_session': True}

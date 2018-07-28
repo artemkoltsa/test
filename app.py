@@ -62,7 +62,7 @@ session_lock = threading.RLock()
 
 
 def switch_state(request):
-    utterance = request['utterance'] = request['request']['original_utterance'].rstrip('.')
+    utterance = request['utterance'] = request['request']['command'].rstrip('.')
     words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
     request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
 

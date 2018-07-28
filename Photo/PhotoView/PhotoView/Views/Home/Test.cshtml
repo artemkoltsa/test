@@ -1,66 +1,27 @@
 @{
-    Layout = null;
+    ViewBag.Title = "Index";
 }
-
-<!DOCTYPE html>
-
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
-    <title>Index</title>
-</head>
-<body>
-    <table border="0" cellpadding="0" cellspacing="0">
-        <tr>
-            <td align="center"><u>Live Camera</u></td>
-            <td></td>
-            <td align="center"><u>Captured Picture</u></td>
-        </tr>
-        <tr>
-            <td><div id="webcam"></div></td>
-            <td>&nbsp;</td>
-            <td><img id="imgCapture" style="visibility: hidden; width: 320px;height: 240px" /></td>
-        </tr>
-    </table>
-    <br />
-    <input type="button" value="Capture" onclick="Capture();" />
-    <br />
-    <span id="camStatus"></span>
-    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
-    <script src="~/Webcam_Plugin/jquery.webcam.js"></script>
-    <script type="text/javascript">
-        $(function () {
-            jQuery("#webcam").webcam({
-                width: 320,
-                height: 240,
-                mode: "save",
-                swffile: '/Webcam_Plugin/jscam.swf',
-                debug: function (type, status) {
-                    $('#camStatus').append(type + ": " + status + '<br /><br />');
-                },
-                onSave: function (data, ab) {
-                    $.ajax({
-                        type: "POST",
-                        url: '/Home/GetCapture',
-                        data: '',
-                        contentType: "application/json; charset=utf-8",
-                        dataType: "text",
-                        success: function (r) {
-                            $("#imgCapture").css("visibility", "visible");
-                            $("#imgCapture").attr("src", r);
-                        },
-                        failure: function (response) {
-                            alert(response.d);
-                        }
-                    });
-                },
-                onCapture: function () {
-                    webcam.save('/Home/Capture');
-                }
-            });
-        });
-        function Capture() {
-            webcam.capture();
-        }
+@section scripts
+{
+    <script src="@Url.Content("~/Scripts/jquery.webcam.js")">
     </script>
-</body>
+    <script>
+        $("#Camera").webcam({
+             width: 320,
+             height: 240,
+             mode: "save",
+             swffile: "@Url.Content("~/Scripts/jscam.swf")",
+             onTick: function () { },
+             onSave: function () {
+             },
+             onCapture: function () {
+                 webcam.save("@Url.Content("~/Home/Capture")/");
+             },
+             debug: function () { },
+             onLoad: function () { }
+         });
+    </script>
+}
+<h2>Index</h2>
+<input type="button" value="Shoot!" onclick="webcam.capture();" />
+<div id="Camera"></div>

@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import threading
+import random
 
 import pymorphy2
 from flask import Flask, request
@@ -81,7 +82,10 @@ def switch_state(request):
 def collect_profile():
     profile = {}
 
-    req = yield {'text': 'Привет! :) Кого ты ищешь - девушку или парня?'}
+    random.choice(['Привет. Кого ты ищешь - девушку или парня?',
+                   'Ну что, кого ищем? Девушку или парня?',
+                   'Кто тебя интересует девушки или парни?'])
+    req = yield {'text': 'Привет :) Кого ты ищешь - девушку или парня?'}
     while True:
         lemmas = req['lemmas']
 

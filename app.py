@@ -170,9 +170,9 @@ def collect_profile():
             req = yield {'text': 'Скажи свой номер ещё раз'}
         profile['phone'] = phone
 
-        user_id = req['session']['user_id']
+        session_id = req['session']['session_id']
         with profile_lock:
-            profiles[user_id] = profile
+            profiles[session_id] = profile
             with open('profiles.json', 'w') as f:
                 json.dump(profiles, f)
 

@@ -101,7 +101,16 @@ def collect_profile():
     text = random.choice(['Я смогу тебе помочь! Как тебя зовут?',
                           'Отлично! Назови свое имя.'])
     req = yield {'text': text}
-    profile['name'] = req['lemmas'][-1]
+
+    while True:
+        utterance = req['utterance']
+        name = names_repository.try_get_name(utterance)
+        if name is not None:
+            break
+
+        req = yield {'text': 'Я не знаю такого имени. Назови имя ещё раз.'}
+
+    profile['name'] = name
 
     text = random.choice(['Сколько тебе лет?',
                           'Назови свой возраст.'])

@@ -137,7 +137,8 @@ def collect_profile():
     req = yield {'text': 'Какую музыку ты слушаешь? Назови пару исполнителей.'}
     profile['music'] = req['lemmas']
 
-    req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки".'}
+    req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
+                         'Я проигнорирую все слова в твоей фразе, кроме чисел.'}
     while True:
         utterance = req['utterance']
         phone = re.sub(r'\D', r'', utterance)
@@ -147,6 +148,8 @@ def collect_profile():
 
         if any(w in lemmas for w in ['да', 'правильно']):
             break
+
+        req = yield {'text': 'Скажи свой номер ещё раз'}
     profile['phone'] = phone
 
     user_id = req['session']['user_id']

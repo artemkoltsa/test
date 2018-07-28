@@ -1,17 +1,16 @@
 import json
 import logging
+import re
 
+import pymorphy2
 from flask import Flask, request
 
 
+morph = pymorphy2.MorphAnalyzer()
 app = Flask(__name__)
 
 
 logging.basicConfig(level=logging.DEBUG)
-
-
-# Хранилище данных о сессиях.
-sessionStorage = {}
 
 
 # Задаем параметры приложения Flask.
@@ -20,15 +19,15 @@ def main():
     # Функция получает тело запроса и возвращает ответ.
     logging.info('Request: %r', request.json)
 
+    response = switch_state(request.json)
     response = {
-        "version": request.json['version'],
-        "session": request.json['session'],
-        "response": {
-            "end_session": False
+        'version': request.json['version'],
+        'session': request.json['session'],
+        'response': {
+            'end_session': False,
+            'text': response['text'],
         }
     }
-
-    handle_dialog(request.json, response)
 
     logging.info('Response: %r', response)
 
@@ -39,65 +38,65 @@ def main():
     )
 
 
-# Функция для непосредственной обработки диалога.
-def handle_dialog(req, res):
-    user_id = req['session']['user_id']
-
-    if req['session']['new']:
-        # Это новый пользователь.
-        # Инициализируем сессию и поприветствуем его.
-
-        sessionStorage[user_id] = {
-            'suggests': [
-                "Не хочу.",
-                "Не буду.",
-                "Отстань!",
-            ]
-        }
-
-        res['response']['text'] = 'Привет! Купи слона!'
-        res['response']['buttons'] = get_suggests(user_id)
-        return
-
-    # Обрабатываем ответ пользователя.
-    if req['request']['original_utterance'].lower() in [
-        'ладно',
-        'куплю',
-        'покупаю',
-        'хорошо',
-    ]:
-        # Пользователь согласился, прощаемся.
-        res['response']['text'] = 'Слона можно найти на Яндекс.Маркете!'
-        return
-
-    # Если нет, то убеждаем его купить слона!
-    res['response']['text'] = 'Все говорят "%s", а ты купи слона!' % (
-        req['request']['original_utterance']
-    )
-    res['response']['buttons'] = get_suggests(user_id)
+profiles = {}
+sessions = {}
 
 
-# Функция возвращает две подсказки для ответа.
-def get_suggests(user_id):
-    session = sessionStorage[user_id]
+def switch_state(request):
+    user_id = request['session']['user_id']
+    if user_id not in profiles:
+        profiles[user_id] = {}
+    profile = request['profile'] = profiles[user_id]
 
-    # Выбираем две первые подсказки из массива.
-    suggests = [
-        {'title': suggest, 'hide': True}
-        for suggest in session['suggests'][:2]
-    ]
+    utterance = request['utterance'] = request['request']['original_utterance']
+    words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
+    request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
 
-    # Убираем первую подсказку, чтобы подсказки менялись каждый раз.
-    session['suggests'] = session['suggests'][1:]
-    sessionStorage[user_id] = session
+    session_id = request['session']['session_id']
+    if session_id not in sessions:
+        state = sessions[session_id] = collect_profile(profile)
+        response = state.send(None)
+    else:
+        state = sessions[session_id]
+        response = state.send(request)
 
-    # Если осталась только одна подсказка, предлагаем подсказку
-    # со ссылкой на Яндекс.Маркет.
-    if len(suggests) < 2:
-        suggests.append({
-            "title": "Ладно",
-            "url": "https://market.yandex.ru/search?text=слон",
-            "hide": True
-        })
+    return response
 
-    return suggests
+
+def collect_profile(profile):
+    req = yield {'text': 'Кого ты ищешь - девушку или парня?'}
+    while True:
+        lemmas = req['lemmas']
+
+        if any(w in lemmas for w in ['парень', 'молодой', 'мч', 'мужчина', 'мальчик']):
+            gender = 'male'
+            break
+        elif any(w in lemmas for w in ['девушка', 'женщина', 'тёлка', 'телок', 'девочка']):
+            gender = 'female'
+            break
+
+        req = yield {'text': 'Скажи или слово "девушка", или слово "парень"'}
+    profile['gender'] = gender
+
+    req = yield {'text': 'Сколько тебе лет?'}
+    while True:
+        utterance = req['utterance']
+
+        if not re.fullmatch(r'\d+', utterance):
+            req = yield {'text': 'Назови число'}
+            continue
+        age = int(utterance)
+
+        if age < 18:
+            yield {'text': 'Навык доступен только для людей не младше 18 лет :('}
+            return
+        if age > 100:
+            yield {'text': 'Некорректный возраст, назови возраст ещё раз'}
+            continue
+        break
+    profile['age'] = age
+
+    req = yield {'text': 'В каком городе ты живёшь?'}
+    utterance = req['utterance']
+    # TODO: Проверить город
+    profile['city'] = utterance

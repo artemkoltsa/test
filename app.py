@@ -108,7 +108,7 @@ def collect_profile():
         if name is not None:
             break
 
-        req = yield {'text': 'Я не знаю такого имени. Назови имя ещё раз.'}
+        req = yield {'text': 'Первый раз слышу такое имя. Назови как в паспорте написано.'}
 
     profile['name'] = name
 
@@ -128,7 +128,7 @@ def collect_profile():
                          'end_session': True}
             return
         if age > 100:
-            req = yield {'text': 'Некорректный возраст, назови возраст ещё раз'}
+            req = yield {'text': 'Выглядишь моложе. Назови свой настоящий возраст :)'}
             continue
         break
     profile['age'] = age
@@ -140,7 +140,7 @@ def collect_profile():
         if names_repository.try_get_city(utterance) is not None:
             break
 
-        req = yield {'text': 'Я не знаю такого города. Назови город ещё раз.'}
+        req = yield {'text': 'Я не знаю такого города. Назови его полное название.'}
     profile['city'] = utterance
 
     req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}

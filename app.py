@@ -158,15 +158,15 @@ def collect_profile():
         req = yield {'text': 'Скажи свой номер ещё раз'}
     profile['phone'] = phone
 
-    user_id = req['session']['user_id']
-    with profile_lock:
-        profiles[user_id] = profile
-        with open('profiles.json', 'w') as f:
-            json.dump(profiles, f)
-
     candidates = [value for id, value in profiles.items()
-                  if user_id != id and get_match_score(profile, value) > 0]
+                  if get_match_score(profile, value) > 0]
     if not candidates:
+        user_id = req['session']['user_id']
+        with profile_lock:
+            profiles[user_id] = profile
+            with open('profiles.json', 'w') as f:
+                json.dump(profiles, f)
+
         if gender == 'male':
             text = 'Ура, я добавила тебя в базу! ' + \
                    'Как только навыком воспользуется подходящая тебе девушка, я сообщу ей твои контакты!'
@@ -180,9 +180,9 @@ def collect_profile():
     if gender == 'male':
         text = 'Кажется, я знаю одну девушку, которая может тебе понравиться. Её зовут {}, ей {}. ' \
                'Ты можешь позвонить ей по номеру: {}'.format(
-            best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+            best_candidate['name'].capitalize(), best_candidate['age'], best_candidate['phone'])
     else:
         text = 'Кажется, я знаю одного парня, который может тебе понравиться. Его зовут {}, ему {}. ' \
                'Ты можешь позвонить ему по номеру: {}'.format(
-            best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+            best_candidate['name'].capitalize(), best_candidate['age'], best_candidate['phone'])
     req = yield {'text': text, 'end_session': True}

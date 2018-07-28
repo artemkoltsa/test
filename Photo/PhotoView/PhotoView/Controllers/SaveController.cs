@@ -27,7 +27,8 @@ namespace PhotoView.Controllers
 				// сохраняем файл в папку Files в проекте
 				upload.SaveAs(Server.MapPath("~/Files/" + fileName));
 			}
-			return RedirectToAction("Index");
+
+			return View("Done");
 		}
 	}
 }

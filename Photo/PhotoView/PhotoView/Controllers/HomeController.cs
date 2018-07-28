@@ -17,12 +17,5 @@ namespace PhotoView.Controllers
 
 			return View();
 		}
-
-		public ActionResult Test2()
-		{
-			ViewBag.Message = "Your contact page.";
-
-			return View();
-		}
     }
 }

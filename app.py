@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 import threading
 
@@ -7,6 +8,9 @@ import pymorphy2
 from flask import Flask, request
 
 from utils import CityRepository
+
+
+PROFILE_FILE = 'profiles.json'
 
 
 morph = pymorphy2.MorphAnalyzer()
@@ -41,7 +45,15 @@ def main():
     )
 
 
-profiles = {}
+def load_profiles():
+    if not os.path.isfile(PROFILE_FILE):
+        return {}
+
+    with open(PROFILE_FILE) as f:
+        return json.load(f)
+
+
+profiles = load_profiles()
 profile_lock = threading.RLock()
 
 sessions = {}
@@ -49,12 +61,6 @@ session_lock = threading.RLock()
 
 
 def switch_state(request):
-    user_id = request['session']['user_id']
-    with profile_lock:
-        if user_id not in profiles:
-            profiles[user_id] = {}
-        profile = request['profile'] = profiles[user_id]
-
     utterance = request['utterance'] = request['request']['original_utterance']
     words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
     request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
@@ -62,7 +68,7 @@ def switch_state(request):
     session_id = request['session']['session_id']
     with session_lock:
         if session_id not in sessions:
-            state = sessions[session_id] = collect_profile(profile)
+            state = sessions[session_id] = collect_profile()
             request = None
         else:
             state = sessions[session_id]
@@ -71,7 +77,9 @@ def switch_state(request):
     return response
 
 
-def collect_profile(profile):
+def collect_profile():
+    profile = {}
+
     req = yield {'text': 'Кого ты ищешь - девушку или парня?'}
     while True:
         lemmas = req['lemmas']
@@ -139,6 +147,12 @@ def collect_profile(profile):
         if any(w in lemmas for w in ['да', 'правильно']):
             break
     profile['phone'] = phone
+
+    user_id = req['session']['user_id']
+    with profile_lock:
+        profiles[user_id] = profile
+        with open('profiles.json', 'w') as f:
+            json.dump(profiles, f)
 
     yield {'text': 'Всё понятно',
            'end_session': True}

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 
 <h3>Выберите файл для загрузки</h3>
-@using (Html.BeginForm("Upload", "Home", FormMethod.Post, new {enctype="multipart/form-data"}))
+@using (Html.BeginForm("Upload", "Save", FormMethod.Post, new {enctype="multipart/form-data"}))
 {
 	<input type="file" name="upload" /><br>
 	<input type="submit" value="Загрузить" />

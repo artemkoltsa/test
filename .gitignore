@@ -332,3 +332,4 @@ venv.bak/
 
 
 # End of https://www.gitignore.io/api/python
+.Photo/PhotoView/PhotoView/Files

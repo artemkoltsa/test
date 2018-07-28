@@ -9,6 +9,7 @@ class NamedEntitiesRepository:
         return NamedEntitiesRepository._find_in_list(sentence, self.city_list)
 
     def try_get_name(self, sentence):
+        sentence = sentence.replace('ё', 'е')
         return NamedEntitiesRepository._find_in_list(sentence, self.names_list)
 
     @staticmethod

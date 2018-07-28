@@ -62,7 +62,7 @@ session_lock = threading.RLock()
 
 
 def switch_state(request):
-    utterance = request['utterance'] = request['request']['original_utterance']
+    utterance = request['utterance'] = request['request']['original_utterance'].rstrip('.')
     words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
     request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
 
@@ -101,7 +101,7 @@ def collect_profile():
 
     req = yield {'text': 'Сколько тебе лет?'}
     while True:
-        utterance = req['utterance'].strip('.')
+        utterance = req['utterance']
 
         if not re.fullmatch(r'\d+', utterance):
             req = yield {'text': 'Назови число'}

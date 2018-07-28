@@ -2,12 +2,17 @@
     ViewBag.Title = "Upload";
 }
 <meta charset="utf-8" />
+<link rel="stylesheet" type="text/css" href="~/Content/SaveCss.css" media="screen" />
 
-<h3>Выберите файл для загрузки</h3>
-@using (Html.BeginForm("Upload", "Save", FormMethod.Post, new { enctype = "multipart/form-data" }))
-{
-    <input type="hidden" name="token" value="@ViewBag.Token" /><br>
+<body>
+    <label class="title">Выберите фотографию</label>
 
-    <input type="file" name="upload" /><br>
-    <input type="submit" value="Загрузить" />
-}
+    @using (Html.BeginForm("Upload", "Save", FormMethod.Post, new { enctype = "multipart/form-data" }))
+    {
+        <input type="hidden" name="token" value="@ViewBag.Token" /><br>
+
+        <input class="fileUploadButton" type="file" name="upload" /><br>
+
+        <input class="submitButton" type="submit" value="Загрузить" />
+    }
+</body>

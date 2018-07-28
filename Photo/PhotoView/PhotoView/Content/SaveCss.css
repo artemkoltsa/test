@@ -1,0 +1,31 @@
+﻿button {
+    color: wheat;
+}
+.title {
+    font-size: 20;
+    color: rebeccapurple;
+    padding: 8px 8px;
+}
+
+.fileUploadButton {
+    background-color: rebeccapurple;
+    padding-left: 16px;
+    padding-right: 0px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin: 8px 8px;
+    border-radius: 6px;
+    color: whitesmoke;
+    font-weight: 700;
+}
+
+.submitButton {
+    background-color: rebeccapurple;
+    padding: 4px 8px;
+    margin: 4px 8px;
+    color: whitesmoke;
+    border-radius: 4px;
+    align-content: center;
+    font-weight: 500;
+}
+

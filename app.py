@@ -9,7 +9,7 @@ import pymorphy2
 from flask import Flask, request
 
 from match import get_match_score
-from utils import CityRepository
+from utils import CityRepository, filter_stop_words
 
 
 PROFILE_FILE = 'profiles.json'
@@ -138,13 +138,13 @@ def collect_profile():
     profile['city'] = utterance
 
     req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}
-    profile['occupation'] = req['lemmas']
+    profile['occupation'] = filter_stop_words(req['lemmas'])
 
     req = yield {'text': 'Чем ты занимаешься в свободное время? Какие у тебя хобби?'}
-    profile['hobbies'] = req['lemmas']
+    profile['hobbies'] = filter_stop_words(req['lemmas'])
 
     req = yield {'text': 'Какую музыку ты слушаешь? Назови пару исполнителей.'}
-    profile['music'] = req['lemmas']
+    profile['music'] = filter_stop_words(req['lemmas'])
 
     req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
                          'Я проигнорирую все слова в твоей фразе, кроме чисел.'}

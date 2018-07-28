@@ -9,7 +9,7 @@ import pymorphy2
 from flask import Flask, request
 
 from match import get_match_score
-from utils import CityRepository, filter_stop_words
+from utils import NamedEntitiesRepository, filter_stop_words
 
 
 PROFILE_FILE = 'profiles.json'
@@ -18,7 +18,7 @@ PROFILE_FILE = 'profiles.json'
 morph = pymorphy2.MorphAnalyzer()
 app = Flask(__name__)
 
-city_repository = CityRepository()
+names_repository = NamedEntitiesRepository()
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -128,7 +128,7 @@ def collect_profile():
     while True:
         utterance = req['utterance']
 
-        if city_repository.try_get_city(utterance) is not None:
+        if names_repository.try_get_city(utterance) is not None:
             break
 
         req = yield {'text': 'Я не знаю такого города. Назови город ещё раз.'}

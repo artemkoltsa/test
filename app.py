@@ -7,6 +7,7 @@ import threading
 import pymorphy2
 from flask import Flask, request
 
+from match import get_match_score
 from utils import CityRepository
 
 
@@ -154,5 +155,25 @@ def collect_profile():
         with open('profiles.json', 'w') as f:
             json.dump(profiles, f)
 
-    yield {'text': 'Всё понятно',
-           'end_session': True}
+    candidates = [value for id, value in profiles.items()
+                  if user_id != id and get_match_score(profile, value) > 0]
+    if not candidates:
+        if gender == 'male':
+            text = 'Ура, я добавила тебя в базу! ' + \
+                   'Как только навыком воспользуется подходящая тебе девушка, я сообщу ей твои контакты!'
+        else:
+            text = 'Ура, я добавила тебя в базу! ' + \
+                   'Как только навыком воспользуется подходящий тебе парень, я сообщу ему твои контакты!'
+        req = yield {'text': text, 'end_session': True}
+        return
+
+    best_candidate = max(candidates, key=lambda value: get_match_score(profile, value))
+    if gender == 'male':
+        text = 'Кажется, я знаю одну девушку, которая может тебе понравиться. Её зовут {}, ей {}. ' \
+               'Ты можешь позвонить ей по номеру: {}'.format(
+            best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+    else:
+        text = 'Кажется, я знаю одного парня, который может тебе понравиться. Его зовут {}, ему {}. ' \
+               'Ты можешь позвонить ему по номеру: {}'.format(
+            best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+    req = yield {'text': text, 'end_session': True}

@@ -96,8 +96,7 @@ def collect_profile():
     profile['gender'] = gender
 
     req = yield {'text': 'Я смогу тебе помочь! Как тебя зовут?'}
-    utterance = req['utterance']
-    profile['name'] = utterance
+    profile['name'] = req['lemmas'][-1]
 
     req = yield {'text': 'Сколько тебе лет?'}
     while True:
@@ -143,7 +142,7 @@ def collect_profile():
         utterance = req['utterance']
         phone = re.sub(r'\D', r'', utterance)
 
-        req = yield {'text': 'Я правильно распознала твой номер телефона?'}
+        req = yield {'text': '{}. Я правильно распознала твой номер телефона?'.format(phone)}
         lemmas = req['lemmas']
 
         if any(w in lemmas for w in ['да', 'правильно']):

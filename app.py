@@ -85,10 +85,10 @@ def collect_profile():
         lemmas = req['lemmas']
 
         if any(w in lemmas for w in ['парень', 'молодой', 'мч', 'мужчина', 'мальчик']):
-            gender = 'male'
+            gender = 'female'
             break
         elif any(w in lemmas for w in ['девушка', 'женщина', 'тёлка', 'телок', 'девочка']):
-            gender = 'female'
+            gender = 'male'
             break
 
         req = yield {'text': 'Скажи или слово "девушка", или слово "парень"'}

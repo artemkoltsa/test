@@ -82,9 +82,9 @@ def switch_state(request):
 def collect_profile():
     profile = {}
 
-    welcomeQuery = random.choice(['Привет! Кого ты ищешь - девушку или парня?',
-                                  'Привет, кого будем искать? Девушку или парня?'])
-    req = yield {'text': welcomeQuery}
+    text = random.choice(['Привет! Кого ты ищешь - девушку или парня?',
+                          'Привет, кого будем искать? Девушку или парня?'])
+    req = yield {'text': text}
     while True:
         lemmas = req['lemmas']
 
@@ -98,17 +98,14 @@ def collect_profile():
         req = yield {'text': 'Скажи или слово "девушка", или слово "парень"'}
     profile['gender'] = gender
 
-
-
-    nameQuery = random.choice(['Я смогу тебе помочь! Как тебя зовут?',
-                               'Отлично! Назови свое имя.'])
-    req = yield {'text': nameQuery}
+    text = random.choice(['Я смогу тебе помочь! Как тебя зовут?',
+                          'Отлично! Назови свое имя.'])
+    req = yield {'text': text}
     profile['name'] = req['lemmas'][-1]
 
-
-    ageQuery = random.choice(['Сколько тебе лет?',
-                              'Назови свой возраст.'])
-    req = yield {'text': ageQuery}
+    text = random.choice(['Сколько тебе лет?',
+                          'Назови свой возраст.'])
+    req = yield {'text': text}
     while True:
         utterance = req['utterance']
 

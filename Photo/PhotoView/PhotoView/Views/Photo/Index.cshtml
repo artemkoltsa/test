@@ -1,6 +1,6 @@
 ﻿<script type="text/javascript">
 
-    @*function UploadPic() {
+    function UploadPic() {
         $.ajax({
             type: 'POST',
             url: ("@Url.Content("~/Photo/Rebind")/"),
@@ -11,7 +11,7 @@
                 alert("Photo Capture successfully!");
             }
         });
-    }*@
+    }
     function Uploadsubmit() {
         debugger;
         var src = $('img').attr('src');
@@ -28,7 +28,6 @@
             window.opener.location.href = "http://localhost:55694/Photo/Changephoto";
             self.close();}}
 </script>
-
 @using (Html.BeginForm())
 {
     @section scripts

@@ -101,7 +101,7 @@ def collect_profile():
 
     req = yield {'text': 'Сколько тебе лет?'}
     while True:
-        utterance = req['utterance']
+        utterance = req['utterance'].strip('.')
 
         if not re.fullmatch(r'\d+', utterance):
             req = yield {'text': 'Назови число'}

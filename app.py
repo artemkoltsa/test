@@ -80,7 +80,7 @@ def switch_state(request):
 def collect_profile():
     profile = {}
 
-    req = yield {'text': 'Кого ты ищешь - девушку или парня?'}
+    req = yield {'text': 'Привет :) Кого ты ищешь - девушку или парня?'}
     while True:
         lemmas = req['lemmas']
 
@@ -108,7 +108,7 @@ def collect_profile():
         age = int(utterance)
 
         if age < 18:
-            req = yield {'text': 'Навык доступен только для людей не младше 18 лет :(',
+            req = yield {'text': 'Навык доступен только для людей не младше 18 лет, сорян :(',
                          'end_session': True}
             return
         if age > 100:
@@ -117,7 +117,7 @@ def collect_profile():
         break
     profile['age'] = age
 
-    req = yield {'text': 'В каком городе ты живёшь?'}
+    req = yield {'text': 'А в каком городе ты живёшь?'}
     while True:
         utterance = req['utterance']
 
@@ -130,10 +130,10 @@ def collect_profile():
     req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}
     profile['occupation'] = req['lemmas']
 
-    req = yield {'text': 'Какие у тебя хобби?'}
+    req = yield {'text': 'Чем ты занимаешься в свободное время? Какие у тебя хобби?'}
     profile['hobbies'] = req['lemmas']
 
-    req = yield {'text': 'Какую музыку ты слушаешь? Назови жанр и пару исполнителей.'}
+    req = yield {'text': 'Какую музыку ты слушаешь? Назови пару исполнителей.'}
     profile['music'] = req['lemmas']
 
     req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки".'}

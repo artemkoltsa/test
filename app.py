@@ -136,6 +136,19 @@ def collect_profile():
     req = yield {'text': 'Какую музыку ты слушаешь? Назови пару исполнителей.'}
     profile['music'] = req['lemmas']
 
+    req = yield {'text': 'Загрузи свое фото ' + 'http://whoisalice.pagekite.me/Save?token=' + req['session']['user_id']}
+    req = yield {'text': 'Фото загружено?'}
+    while True:
+        lemmas = req['lemmas']
+
+        if any(w in lemmas for w in ['да', 'правильно']):
+            break
+        req = yield {'text': 'Загрузи фото еще раз'+
+                             'http://whoisalice.pagekite.me/Save?token=' +
+                             req['session']['user_id']}
+        req = yield {'text': 'Фото загружено?'}
+
+
     req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
                          'Я проигнорирую все слова в твоей фразе, кроме чисел.'}
     while True:
@@ -174,8 +187,10 @@ def collect_profile():
         text = 'Кажется, я знаю одну девушку, которая может тебе понравиться. Её зовут {}, ей {}. ' \
                'Ты можешь позвонить ей по номеру: {}'.format(
             best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+
     else:
         text = 'Кажется, я знаю одного парня, который может тебе понравиться. Его зовут {}, ему {}. ' \
                'Ты можешь позвонить ему по номеру: {}'.format(
             best_candidate['name'], best_candidate['age'], best_candidate['phone'])
+    req = yield {'text': 'https://whoisalice.pagekite.me/getfile?token=' + best_candidate['user_id']}
     req = yield {'text': text, 'end_session': True}

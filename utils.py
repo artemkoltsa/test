@@ -1,11 +1,7 @@
-from fuzzywuzzy import process
-
 class CityRepository:
     def __init__(self):
-        self.fuzzy_coef = 75
         with open('files/cities.txt') as f:
-            self.city_list = set(f.readlines())
+            self.city_list = set(city.lower().strip() for city in f.readlines())
 
     def try_get_city(self, city_name):
-        city = process.extractOne(city_name, self.city_list, score_cutoff=self.fuzzy_coef)
-        return city[0] if city is not None else None
+        return city_name if city_name.lower() in self.city_list else None

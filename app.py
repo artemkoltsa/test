@@ -3,7 +3,7 @@ import os
 import re
 import threading
 
-from alice_scripts import alice_skill, request, say
+from alice_scripts import AliceSkill, request, say
 from match import get_match_score
 from utils import NamedEntitiesRepository, filter_stop_words
 
@@ -23,7 +23,10 @@ profiles = load_profiles()
 profile_lock = threading.RLock()
 
 
-@alice_skill
+skill = AliceSkill(__name__)
+
+
+@skill.script
 def dating_skill():
     profile = {
         'gender': (yield from ask_gender()),

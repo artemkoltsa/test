@@ -16,44 +16,48 @@ morph = pymorphy2.MorphAnalyzer()
 request = LocalProxy(lambda: flask.g.request)
 
 
-def alice_skill(func):
-    app = flask.Flask(func.__name__)
+class AliceSkill(flask.Flask):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    @app.route("/", methods=['POST'])
-    def main():
-        request = flask.request.json
-        logging.info('Request: %r', )
+        self._sessions = {}
+        self._session_lock = threading.RLock()
 
-        content = switch_state(request)
-        response = {
-            'version': request['version'],
-            'session': request['session'],
-            'response': content,
-        }
+        @self.before_request
+        def save_request():
+            flask.g.request = flask.request.json
 
-        logging.info('Response: %r', 'version')
-        return flask.jsonify(response)
+    def script(self, generator):
+        @self.route("/", methods=['POST'])
+        def handle_post():
+            logging.info('Request: %r', request)
 
-    sessions = {}
-    session_lock = threading.RLock()
+            content = self._switch_state(generator)
+            response = {
+                'version': request['version'],
+                'session': request['session'],
+                'response': content,
+            }
 
-    def switch_state(request):
+            logging.info('Response: %r', response)
+            return flask.jsonify(response)
+
+        return generator
+
+    def _switch_state(self, generator):
         utterance = request['utterance'] = request['request']['command'].rstrip('.')
         words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
         request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
 
         session_id = request['session']['session_id']
-        with session_lock:
-            if session_id not in sessions:
-                state = sessions[session_id] = func()
+        with self._session_lock:
+            if session_id not in self._sessions:
+                state = self._sessions[session_id] = generator()
             else:
-                state = sessions[session_id]
-        flask.g.request = request
+                state = self._sessions[session_id]
         content = next(state)
 
         return content
-
-    return app
 
 
 def say(*texts, **response_kwargs):

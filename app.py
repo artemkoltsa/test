@@ -30,20 +30,17 @@ logging.basicConfig(level=logging.DEBUG)
 def main():
     logging.info('Request: %r', request.json)
 
-    result = switch_state(request.json)
-    response = {
+    response = switch_state(request.json)
+    body = {
         'version': request.json['version'],
         'session': request.json['session'],
-        'response': {
-            'end_session': result.get('end_session', False),
-            'text': result['text'],
-        }
+        'response': response,
     }
 
-    logging.info('Response: %r', response)
+    logging.info('Response: %r', body)
 
     return json.dumps(
-        response,
+        body,
         ensure_ascii=False,
         indent=2
     )
@@ -72,7 +69,7 @@ def switch_state(request):
     session_id = request['session']['session_id']
     with session_lock:
         if session_id not in sessions:
-            state = sessions[session_id] = collect_profile()
+            state = sessions[session_id] = run_script()
             request = None
         else:
             state = sessions[session_id]
@@ -85,11 +82,15 @@ def switch_state(request):
 input = LocalProxy(lambda: flask.g.input)
 
 
-def say(*texts, end_session=False):
-    return {'text': random.choice(texts), 'end_session': end_session}
+def say(*texts, **response_kwargs):
+    response = response_kwargs
+    response['text'] = random.choice(texts)
+    if 'end_session' not in response:
+        response['end_session'] = False
+    return response
 
 
-def collect_profile():
+def run_script():
     profile = {
         'gender': (yield from ask_gender()),
         'name': (yield from ask_name()),

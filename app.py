@@ -178,5 +178,5 @@ morph = pymorphy2.MorphAnalyzer()
 @skill.before_request
 def save_lemmas():
     command = request['command'] = request['request']['command'].rstrip('.')
-    words = request['words'] = re.findall(r'\w+', command, flags=re.UNICODE)
+    words = request['words'] = re.findall(r'[\w-]+', command, flags=re.UNICODE)
     request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]

@@ -1,49 +1,14 @@
 import json
-import logging
 import os
 import re
 import threading
-import random
 
-import flask
-import pymorphy2
-from flask import Flask, request
-from werkzeug.local import LocalProxy
-
+from alice_scripts import alice_skill, request, say
 from match import get_match_score
 from utils import NamedEntitiesRepository, filter_stop_words
 
 
 PROFILE_FILE = 'profiles.json'
-
-
-morph = pymorphy2.MorphAnalyzer()
-app = Flask(__name__)
-
-names_repository = NamedEntitiesRepository()
-
-
-logging.basicConfig(level=logging.DEBUG)
-
-
-@app.route("/", methods=['POST'])
-def main():
-    logging.info('Request: %r', request.json)
-
-    response = switch_state(request.json)
-    body = {
-        'version': request.json['version'],
-        'session': request.json['session'],
-        'response': response,
-    }
-
-    logging.info('Response: %r', body)
-
-    return json.dumps(
-        body,
-        ensure_ascii=False,
-        indent=2
-    )
 
 
 def load_profiles():
@@ -57,47 +22,16 @@ def load_profiles():
 profiles = load_profiles()
 profile_lock = threading.RLock()
 
-sessions = {}
-session_lock = threading.RLock()
 
-
-def switch_state(request):
-    utterance = request['utterance'] = request['request']['command'].rstrip('.')
-    words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
-    request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
-
-    session_id = request['session']['session_id']
-    with session_lock:
-        if session_id not in sessions:
-            state = sessions[session_id] = run_script()
-            request = None
-        else:
-            state = sessions[session_id]
-    flask.g.input = request
-    response = next(state)
-
-    return response
-
-
-input = LocalProxy(lambda: flask.g.input)
-
-
-def say(*texts, **response_kwargs):
-    response = response_kwargs
-    response['text'] = random.choice(texts)
-    if 'end_session' not in response:
-        response['end_session'] = False
-    return response
-
-
-def run_script():
+@alice_skill
+def dating_skill():
     profile = {
         'gender': (yield from ask_gender()),
         'name': (yield from ask_name()),
         'age': (yield from ask_age()),
         'city': (yield from ask_city()),
     }
-    add_tags(profile)
+    yield from add_tags(profile)
 
     candidates = [value for id, value in profiles.items()
                   if get_match_score(profile, value) > 0]
@@ -114,7 +48,7 @@ def ask_gender():
     yield say('Привет! Кого ты ищешь - девушку или парня?',
               'Привет, кого будем искать? Девушку или парня?')
     while True:
-        lemmas = input['lemmas']
+        lemmas = request['lemmas']
 
         if any(w in lemmas for w in ['парень', 'человек', 'мч', 'мужчина']):
             return 'female'
@@ -124,11 +58,14 @@ def ask_gender():
         yield say('Скажи или слово "девушка", или слово "парень"')
 
 
+names_repository = NamedEntitiesRepository()
+
+
 def ask_name():
     yield say('Я смогу тебе помочь! Как тебя зовут?',
               'Отлично! Назови свое имя.')
     while True:
-        utterance = input['utterance']
+        utterance = request['utterance']
         name = names_repository.try_get_name(utterance)
         if name is not None:
             return name
@@ -139,7 +76,7 @@ def ask_name():
 def ask_age():
     yield say('Сколько тебе лет?', 'Назови свой возраст.')
     while True:
-        utterance = input['utterance']
+        utterance = request['utterance']
 
         if not re.fullmatch(r'\d+', utterance):
             yield say('Назови число')
@@ -159,7 +96,7 @@ def ask_age():
 def ask_city():
     yield say('А в каком городе ты живёшь?')
     while True:
-        utterance = input['utterance']
+        utterance = request['utterance']
 
         if names_repository.try_get_city(utterance) is not None:
             return utterance
@@ -169,24 +106,24 @@ def ask_city():
 
 def add_tags(profile):
     yield say('Расскажи, где ты работаешь или учишься?')
-    profile['occupation'] = filter_stop_words(input['lemmas'])
+    profile['occupation'] = filter_stop_words(request['lemmas'])
 
     yield say('Чем ты занимаешься в свободное время? Какие у тебя хобби?')
-    profile['hobbies'] = filter_stop_words(input['lemmas'])
+    profile['hobbies'] = filter_stop_words(request['lemmas'])
 
     yield say('Какую музыку ты слушаешь? Назови пару исполнителей.')
-    profile['music'] = filter_stop_words(input['lemmas'])
+    profile['music'] = filter_stop_words(request['lemmas'])
 
 
 def ask_phone():
     yield say('Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
               'Я проигнорирую все слова в твоей фразе, кроме чисел.')
     while True:
-        utterance = input['utterance']
+        utterance = request['utterance']
         phone = re.sub(r'\D', r'', utterance)
 
         yield say('Я правильно распознала твой номер телефона?')
-        lemmas = input['lemmas']
+        lemmas = request['lemmas']
 
         if any(w in lemmas for w in ['да', 'правильно']):
             return phone
@@ -195,7 +132,7 @@ def ask_phone():
 
 
 def add_to_db(profile):
-    session_id = input['session']['session_id']
+    session_id = request['session']['session_id']
     with profile_lock:
         profiles[session_id] = profile
         with open('profiles.json', 'w') as f:

@@ -54,8 +54,8 @@ def ask_name():
     yield say('Я смогу тебе помочь! Как тебя зовут?',
               'Отлично! Назови свое имя.')
     while True:
-        utterance = request['utterance']
-        name = names_repository.try_get_name(utterance)
+        command = request['command']
+        name = names_repository.try_get_name(command)
         if name is not None:
             return name
 
@@ -65,12 +65,12 @@ def ask_name():
 def ask_age():
     yield say('Сколько тебе лет?', 'Назови свой возраст.')
     while True:
-        utterance = request['utterance']
+        command = request['command']
 
-        if not re.fullmatch(r'\d+', utterance):
+        if not re.fullmatch(r'\d+', command):
             yield say('Назови число')
             continue
-        age = int(utterance)
+        age = int(command)
 
         if age < 18:
             yield say('Навык доступен только для людей не младше 18 лет, сорри :(',
@@ -85,10 +85,10 @@ def ask_age():
 def ask_city():
     yield say('А в каком городе ты живёшь?')
     while True:
-        utterance = request['utterance']
+        command = request['command']
 
-        if names_repository.try_get_city(utterance) is not None:
-            return utterance
+        if names_repository.try_get_city(command) is not None:
+            return command
 
         yield say('Я не знаю такого города. Назови его полное название.')
 
@@ -108,8 +108,8 @@ def ask_phone():
     yield say('Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
               'Я проигнорирую все слова в твоей фразе, кроме чисел.')
     while True:
-        utterance = request['utterance']
-        phone = re.sub(r'\D', r'', utterance)
+        command = request['command']
+        phone = re.sub(r'\D', r'', command)
 
         yield say('Я правильно распознала твой номер телефона?')
         lemmas = request['lemmas']
@@ -177,6 +177,6 @@ morph = pymorphy2.MorphAnalyzer()
 
 @skill.before_request
 def save_lemmas():
-    utterance = request['utterance'] = request['request']['command'].rstrip('.')
-    words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
+    command = request['command'] = request['request']['command'].rstrip('.')
+    words = request['words'] = re.findall(r'\w+', command, flags=re.UNICODE)
     request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]

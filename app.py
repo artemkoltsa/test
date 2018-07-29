@@ -90,14 +90,18 @@ def say(*texts, end_session=False):
 
 
 def collect_profile():
-    profile = {}
-    for ask in [ask_gender, ask_name, ask_age, ask_city, ask_tokens]:
-        yield from ask(profile)
+    profile = {
+        'gender': (yield from ask_gender()),
+        'name': (yield from ask_name()),
+        'age': (yield from ask_age()),
+        'city': (yield from ask_city()),
+    }
+    add_tags(profile)
 
     candidates = [value for id, value in profiles.items()
                   if get_match_score(profile, value) > 0]
     if not candidates:
-        yield from ask_phone(profile)
+        profile['phone'] = yield from ask_phone()
         yield from add_to_db(profile)
         return
 
@@ -105,39 +109,33 @@ def collect_profile():
     yield from show_match(profile, best_candidate)
 
 
-def ask_gender(profile):
+def ask_gender():
     yield say('Привет! Кого ты ищешь - девушку или парня?',
               'Привет, кого будем искать? Девушку или парня?')
     while True:
         lemmas = input['lemmas']
 
         if any(w in lemmas for w in ['парень', 'человек', 'мч', 'мужчина']):
-            gender = 'female'
-            break
-        elif any(w in lemmas for w in ['девушка', 'женщина']):
-            gender = 'male'
-            break
+            return 'female'
+        if any(w in lemmas for w in ['девушка', 'женщина']):
+            return 'male'
 
         yield say('Скажи или слово "девушка", или слово "парень"')
 
-    profile['gender'] = gender
 
-
-def ask_name(profile):
+def ask_name():
     yield say('Я смогу тебе помочь! Как тебя зовут?',
               'Отлично! Назови свое имя.')
     while True:
         utterance = input['utterance']
         name = names_repository.try_get_name(utterance)
         if name is not None:
-            break
+            return name
 
         yield say('Первый раз слышу такое имя. Назови как в паспорте написано.')
 
-    profile['name'] = name
 
-
-def ask_age(profile):
+def ask_age():
     yield say('Сколько тебе лет?', 'Назови свой возраст.')
     while True:
         utterance = input['utterance']
@@ -150,29 +148,25 @@ def ask_age(profile):
         if age < 18:
             yield say('Навык доступен только для людей не младше 18 лет, сорри :(',
                       end_session=True)
-            return
+            return None
         if age > 100:
             yield say('Выглядишь моложе. Назови свой настоящий возраст :)')
             continue
-        break
-
-    profile['age'] = age
+        return age
 
 
-def ask_city(profile):
+def ask_city():
     yield say('А в каком городе ты живёшь?')
     while True:
         utterance = input['utterance']
 
         if names_repository.try_get_city(utterance) is not None:
-            break
+            return utterance
 
         yield say('Я не знаю такого города. Назови его полное название.')
 
-    profile['city'] = utterance
 
-
-def ask_tokens(profile):
+def add_tags(profile):
     yield say('Расскажи, где ты работаешь или учишься?')
     profile['occupation'] = filter_stop_words(input['lemmas'])
 
@@ -183,7 +177,7 @@ def ask_tokens(profile):
     profile['music'] = filter_stop_words(input['lemmas'])
 
 
-def ask_phone(profile):
+def ask_phone():
     yield say('Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
               'Я проигнорирую все слова в твоей фразе, кроме чисел.')
     while True:
@@ -194,11 +188,9 @@ def ask_phone(profile):
         lemmas = input['lemmas']
 
         if any(w in lemmas for w in ['да', 'правильно']):
-            break
+            return phone
 
         yield say('Скажи свой номер ещё раз')
-
-    profile['phone'] = phone
 
 
 def add_to_db(profile):

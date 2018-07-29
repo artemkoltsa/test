@@ -5,8 +5,10 @@ import re
 import threading
 import random
 
+import flask
 import pymorphy2
 from flask import Flask, request
+from werkzeug.local import LocalProxy
 
 from match import get_match_score
 from utils import NamedEntitiesRepository, filter_stop_words
@@ -74,19 +76,26 @@ def switch_state(request):
             request = None
         else:
             state = sessions[session_id]
-    response = state.send(request)
+    flask.g.input = request
+    response = next(state)
 
     return response
+
+
+input = LocalProxy(lambda: flask.g.input)
+
+
+def say(*texts, end_session=False):
+    return {'text': random.choice(texts), 'end_session': end_session}
 
 
 def collect_profile():
     profile = {}
 
-    text = random.choice(['Привет! Кого ты ищешь - девушку или парня?',
-                          'Привет, кого будем искать? Девушку или парня?'])
-    req = yield {'text': text}
+    yield say('Привет! Кого ты ищешь - девушку или парня?',
+              'Привет, кого будем искать? Девушку или парня?')
     while True:
-        lemmas = req['lemmas']
+        lemmas = input['lemmas']
 
         if any(w in lemmas for w in ['парень', 'молодой', 'мч', 'мужчина', 'мальчик']):
             gender = 'female'
@@ -95,82 +104,79 @@ def collect_profile():
             gender = 'male'
             break
 
-        req = yield {'text': 'Скажи или слово "девушка", или слово "парень"'}
+        yield say('Скажи или слово "девушка", или слово "парень"')
     profile['gender'] = gender
 
-    text = random.choice(['Я смогу тебе помочь! Как тебя зовут?',
-                          'Отлично! Назови свое имя.'])
-    req = yield {'text': text}
+    yield say('Я смогу тебе помочь! Как тебя зовут?',
+              'Отлично! Назови свое имя.')
 
     while True:
-        utterance = req['utterance']
+        utterance = input['utterance']
         name = names_repository.try_get_name(utterance)
         if name is not None:
             break
 
-        req = yield {'text': 'Первый раз слышу такое имя. Назови как в паспорте написано.'}
+        yield say('Первый раз слышу такое имя. Назови как в паспорте написано.')
 
     profile['name'] = name
 
-    text = random.choice(['Сколько тебе лет?',
-                          'Назови свой возраст.'])
-    req = yield {'text': text}
+    yield say('Сколько тебе лет?', 'Назови свой возраст.')
     while True:
-        utterance = req['utterance']
+        utterance = input['utterance']
 
         if not re.fullmatch(r'\d+', utterance):
-            req = yield {'text': 'Назови число'}
+            yield say('Назови число')
             continue
         age = int(utterance)
 
         if age < 18:
-            req = yield {'text': 'Навык доступен только для людей не младше 18 лет, сорри :(',
-                         'end_session': True}
+            yield say('Навык доступен только для людей не младше 18 лет, сорри :(',
+                      end_session=True)
             return
         if age > 100:
-            req = yield {'text': 'Выглядишь моложе. Назови свой настоящий возраст :)'}
+            yield say('Выглядишь моложе. Назови свой настоящий возраст :)')
             continue
         break
     profile['age'] = age
 
-    req = yield {'text': 'А в каком городе ты живёшь?'}
+    yield say('А в каком городе ты живёшь?')
     while True:
-        utterance = req['utterance']
+        utterance = input['utterance']
 
         if names_repository.try_get_city(utterance) is not None:
             break
 
-        req = yield {'text': 'Я не знаю такого города. Назови его полное название.'}
+        yield say('Я не знаю такого города. Назови его полное название.')
     profile['city'] = utterance
 
-    req = yield {'text': 'Расскажи, где ты работаешь или учишься?'}
-    profile['occupation'] = filter_stop_words(req['lemmas'])
+    yield say('Расскажи, где ты работаешь или учишься?')
+    profile['occupation'] = filter_stop_words(input['lemmas'])
 
-    req = yield {'text': 'Чем ты занимаешься в свободное время? Какие у тебя хобби?'}
-    profile['hobbies'] = filter_stop_words(req['lemmas'])
+    yield say('Чем ты занимаешься в свободное время? Какие у тебя хобби?')
+    profile['hobbies'] = filter_stop_words(input['lemmas'])
 
-    req = yield {'text': 'Какую музыку ты слушаешь? Назови пару исполнителей.'}
-    profile['music'] = filter_stop_words(req['lemmas'])
+    yield say('Какую музыку ты слушаешь? Назови пару исполнителей.')
+    profile['music'] = filter_stop_words(input['lemmas'])
 
     candidates = [value for id, value in profiles.items()
                   if get_match_score(profile, value) > 0]
     if not candidates:
-        req = yield {'text': 'Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
-                             'Я проигнорирую все слова в твоей фразе, кроме чисел.'}
+        yield say('Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
+                  'Я проигнорирую все слова в твоей фразе, кроме чисел.')
         while True:
-            utterance = req['utterance']
+            utterance = input['utterance']
             phone = re.sub(r'\D', r'', utterance)
 
-            req = yield {'text': 'Я правильно распознала твой номер телефона?'}
-            lemmas = req['lemmas']
+            yield say('Я правильно распознала твой номер телефона?')
+            lemmas = input['lemmas']
 
             if any(w in lemmas for w in ['да', 'правильно']):
                 break
 
-            req = yield {'text': 'Скажи свой номер ещё раз'}
+            yield say('Скажи свой номер ещё раз')
         profile['phone'] = phone
 
-        session_id = req['session']['session_id']
+        session_id = input['session']['session_id']
         with profile_lock:
             profiles[session_id] = profile
             with open('profiles.json', 'w') as f:
@@ -182,7 +188,7 @@ def collect_profile():
         else:
             text = 'Ура, я добавила тебя в базу! ' + \
                    'Как только навыком воспользуется подходящий тебе парень, я сообщу ему твои контакты!'
-        req = yield {'text': text, 'end_session': True}
+        yield say(text, end_session=True)
         return
 
     best_candidate = max(candidates, key=lambda value: get_match_score(profile, value))
@@ -203,4 +209,4 @@ def collect_profile():
     if commons:
         text += '\n\nВы любите одну и ту же музыку, например: {}.'.format(', '.join(commons))
 
-    req = yield {'text': text, 'end_session': True}
+    yield say(text, end_session=True)

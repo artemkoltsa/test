@@ -9,21 +9,6 @@ from match import get_match_score
 from utils import NamedEntitiesRepository, filter_stop_words
 
 
-PROFILE_FILE = 'profiles.json'
-
-
-def load_profiles():
-    if not os.path.isfile(PROFILE_FILE):
-        return {}
-
-    with open(PROFILE_FILE) as f:
-        return json.load(f)
-
-
-profiles = load_profiles()
-profile_lock = threading.RLock()
-
-
 skill = AliceSkill(__name__)
 
 
@@ -170,6 +155,21 @@ def show_match(profile, best_candidate):
         text += '\n\nВы любите одну и ту же музыку, например: {}.'.format(', '.join(commons))
 
     yield say(text, end_session=True)
+
+
+PROFILE_FILE = 'profiles.json'
+
+
+def load_profiles():
+    if not os.path.isfile(PROFILE_FILE):
+        return {}
+
+    with open(PROFILE_FILE) as f:
+        return json.load(f)
+
+
+profiles = load_profiles()
+profile_lock = threading.RLock()
 
 
 morph = pymorphy2.MorphAnalyzer()

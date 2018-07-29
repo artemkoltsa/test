@@ -97,10 +97,10 @@ def collect_profile():
     while True:
         lemmas = input['lemmas']
 
-        if any(w in lemmas for w in ['парень', 'молодой', 'мч', 'мужчина', 'мальчик']):
+        if any(w in lemmas for w in ['парень', 'человек', 'мч', 'мужчина']):
             gender = 'female'
             break
-        elif any(w in lemmas for w in ['девушка', 'женщина', 'тёлка', 'телок', 'девочка']):
+        elif any(w in lemmas for w in ['девушка', 'женщина']):
             gender = 'male'
             break
 

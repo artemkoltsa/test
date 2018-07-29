@@ -3,6 +3,7 @@ import os
 import re
 import threading
 
+import pymorphy2
 from alice_scripts import AliceSkill, request, say
 from match import get_match_score
 from utils import NamedEntitiesRepository, filter_stop_words
@@ -169,3 +170,13 @@ def show_match(profile, best_candidate):
         text += '\n\nВы любите одну и ту же музыку, например: {}.'.format(', '.join(commons))
 
     yield say(text, end_session=True)
+
+
+morph = pymorphy2.MorphAnalyzer()
+
+
+@skill.before_request
+def save_lemmas():
+    utterance = request['utterance'] = request['request']['command'].rstrip('.')
+    words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
+    request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]

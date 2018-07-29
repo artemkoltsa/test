@@ -1,16 +1,12 @@
 import logging
 import random
-import re
 import threading
 from werkzeug.local import LocalProxy
 
 import flask
-import pymorphy2
 
 
 logging.basicConfig(level=logging.DEBUG)
-
-morph = pymorphy2.MorphAnalyzer()
 
 
 request = LocalProxy(lambda: flask.g.request)
@@ -45,10 +41,6 @@ class AliceSkill(flask.Flask):
         return generator
 
     def _switch_state(self, generator):
-        utterance = request['utterance'] = request['request']['command'].rstrip('.')
-        words = request['words'] = re.findall(r'\w+', utterance, flags=re.UNICODE)
-        request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
-
         session_id = request['session']['session_id']
         with self._session_lock:
             if session_id not in self._sessions:

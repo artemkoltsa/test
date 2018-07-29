@@ -1,12 +1,9 @@
 import logging
 import random
 import threading
-from werkzeug.local import LocalProxy
 
 import flask
-
-
-logging.basicConfig(level=logging.DEBUG)
+from werkzeug.local import LocalProxy
 
 
 request = LocalProxy(lambda: flask.g.request)

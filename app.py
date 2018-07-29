@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import threading
@@ -9,11 +10,13 @@ from match import get_match_score
 from utils import NamedEntitiesRepository, filter_stop_words
 
 
+logging.basicConfig(level=logging.DEBUG)
+
 skill = AliceSkill(__name__)
 
 
 @skill.script
-def dating_skill():
+def run_script():
     profile = {
         'gender': (yield from ask_gender()),
         'name': (yield from ask_name()),

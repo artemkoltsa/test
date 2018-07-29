@@ -91,7 +91,21 @@ def say(*texts, end_session=False):
 
 def collect_profile():
     profile = {}
+    for ask in [ask_gender, ask_name, ask_age, ask_city, ask_tokens]:
+        yield from ask(profile)
 
+    candidates = [value for id, value in profiles.items()
+                  if get_match_score(profile, value) > 0]
+    if not candidates:
+        yield from ask_phone(profile)
+        yield from add_to_db(profile)
+        return
+
+    best_candidate = max(candidates, key=lambda value: get_match_score(profile, value))
+    yield from show_match(profile, best_candidate)
+
+
+def ask_gender(profile):
     yield say('Привет! Кого ты ищешь - девушку или парня?',
               'Привет, кого будем искать? Девушку или парня?')
     while True:
@@ -105,11 +119,13 @@ def collect_profile():
             break
 
         yield say('Скажи или слово "девушка", или слово "парень"')
+
     profile['gender'] = gender
 
+
+def ask_name(profile):
     yield say('Я смогу тебе помочь! Как тебя зовут?',
               'Отлично! Назови свое имя.')
-
     while True:
         utterance = input['utterance']
         name = names_repository.try_get_name(utterance)
@@ -120,6 +136,8 @@ def collect_profile():
 
     profile['name'] = name
 
+
+def ask_age(profile):
     yield say('Сколько тебе лет?', 'Назови свой возраст.')
     while True:
         utterance = input['utterance']
@@ -137,8 +155,11 @@ def collect_profile():
             yield say('Выглядишь моложе. Назови свой настоящий возраст :)')
             continue
         break
+
     profile['age'] = age
 
+
+def ask_city(profile):
     yield say('А в каком городе ты живёшь?')
     while True:
         utterance = input['utterance']
@@ -147,8 +168,11 @@ def collect_profile():
             break
 
         yield say('Я не знаю такого города. Назови его полное название.')
+
     profile['city'] = utterance
 
+
+def ask_tokens(profile):
     yield say('Расскажи, где ты работаешь или учишься?')
     profile['occupation'] = filter_stop_words(input['lemmas'])
 
@@ -158,41 +182,43 @@ def collect_profile():
     yield say('Какую музыку ты слушаешь? Назови пару исполнителей.')
     profile['music'] = filter_stop_words(input['lemmas'])
 
-    candidates = [value for id, value in profiles.items()
-                  if get_match_score(profile, value) > 0]
-    if not candidates:
-        yield say('Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
-                  'Я проигнорирую все слова в твоей фразе, кроме чисел.')
-        while True:
-            utterance = input['utterance']
-            phone = re.sub(r'\D', r'', utterance)
 
-            yield say('Я правильно распознала твой номер телефона?')
-            lemmas = input['lemmas']
+def ask_phone(profile):
+    yield say('Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
+              'Я проигнорирую все слова в твоей фразе, кроме чисел.')
+    while True:
+        utterance = input['utterance']
+        phone = re.sub(r'\D', r'', utterance)
 
-            if any(w in lemmas for w in ['да', 'правильно']):
-                break
+        yield say('Я правильно распознала твой номер телефона?')
+        lemmas = input['lemmas']
 
-            yield say('Скажи свой номер ещё раз')
-        profile['phone'] = phone
+        if any(w in lemmas for w in ['да', 'правильно']):
+            break
 
-        session_id = input['session']['session_id']
-        with profile_lock:
-            profiles[session_id] = profile
-            with open('profiles.json', 'w') as f:
-                json.dump(profiles, f)
+        yield say('Скажи свой номер ещё раз')
 
-        if gender == 'male':
-            text = 'Ура, я добавила тебя в базу! ' + \
-                   'Как только навыком воспользуется подходящая тебе девушка, я сообщу ей твои контакты!'
-        else:
-            text = 'Ура, я добавила тебя в базу! ' + \
-                   'Как только навыком воспользуется подходящий тебе парень, я сообщу ему твои контакты!'
-        yield say(text, end_session=True)
-        return
+    profile['phone'] = phone
 
-    best_candidate = max(candidates, key=lambda value: get_match_score(profile, value))
-    if gender == 'male':
+
+def add_to_db(profile):
+    session_id = input['session']['session_id']
+    with profile_lock:
+        profiles[session_id] = profile
+        with open('profiles.json', 'w') as f:
+            json.dump(profiles, f)
+
+    if profile['gender'] == 'male':
+        text = 'Ура, я добавила тебя в базу! ' + \
+               'Как только навыком воспользуется подходящая тебе девушка, я сообщу ей твои контакты!'
+    else:
+        text = 'Ура, я добавила тебя в базу! ' + \
+               'Как только навыком воспользуется подходящий тебе парень, я сообщу ему твои контакты!'
+    yield say(text, end_session=True)
+
+
+def show_match(profile, best_candidate):
+    if profile['gender'] == 'male':
         text = 'Кажется, я знаю одну девушку, которая может тебе понравиться. Её зовут {}, ей {}. ' \
                'Ты можешь позвонить ей по номеру: {}.'.format(
             best_candidate['name'].capitalize(), best_candidate['age'], best_candidate['phone'])

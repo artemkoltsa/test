@@ -25,7 +25,7 @@ class Skill(flask.Flask):
     def script(self, generator):
         @self.route("/", methods=['POST'])
         def handle_post():
-            logging.info('Request: %r', request)
+            logging.debug('Request: %r', request)
 
             content = self._switch_state(generator)
             response = {
@@ -34,7 +34,7 @@ class Skill(flask.Flask):
                 'response': content,
             }
 
-            logging.info('Response: %r', response)
+            logging.debug('Response: %r', response)
             return flask.jsonify(response)
 
         return generator

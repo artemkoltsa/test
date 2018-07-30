@@ -116,7 +116,7 @@ def ask_phone():
 
 
 def add_to_db(profile):
-    session_id = request['session']['session_id']
+    session_id = request.session_id
     with profile_lock:
         profiles[session_id] = profile
         with open('profiles.json', 'w') as f:

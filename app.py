@@ -4,15 +4,14 @@ import os
 import re
 import threading
 
-import pymorphy2
-from alice_scripts import AliceSkill, request, say
+from alice_scripts import Skill, request, say, suggest
 from match import get_match_score
 from utils import NamedEntitiesRepository, filter_stop_words
 
 
 logging.basicConfig(level=logging.DEBUG)
 
-skill = AliceSkill(__name__)
+skill = Skill(__name__)
 
 
 @skill.script
@@ -38,16 +37,16 @@ def run_script():
 
 def ask_gender():
     yield say('Привет! Кого ты ищешь - девушку или парня?',
-              'Привет, кого будем искать? Девушку или парня?')
+              'Привет, кого будем искать? Девушку или парня?',
+              suggest('Девушку', 'Парня'))
     while True:
-        lemmas = request['lemmas']
-
-        if any(w in lemmas for w in ['парень', 'человек', 'мч', 'мужчина']):
+        if request.has_lemmas('парень', 'человек', 'мч', 'мужчина'):
             return 'female'
-        if any(w in lemmas for w in ['девушка', 'женщина']):
+        if request.has_lemmas('девушка', 'женщина'):
             return 'male'
 
-        yield say('Скажи или слово "девушка", или слово "парень"')
+        yield say('Скажи или слово "девушка", или слово "парень"',
+                  suggest('Девушка', 'Парень'))
 
 
 names_repository = NamedEntitiesRepository()
@@ -57,8 +56,7 @@ def ask_name():
     yield say('Я смогу тебе помочь! Как тебя зовут?',
               'Отлично! Назови свое имя.')
     while True:
-        command = request['command']
-        name = names_repository.try_get_name(command)
+        name = names_repository.try_get_name(request.command)
         if name is not None:
             return name
 
@@ -68,12 +66,10 @@ def ask_name():
 def ask_age():
     yield say('Сколько тебе лет?', 'Назови свой возраст.')
     while True:
-        command = request['command']
-
-        if not re.fullmatch(r'\d+', command):
+        if not re.fullmatch(r'\d+', request.command):
             yield say('Назови число')
             continue
-        age = int(command)
+        age = int(request.command)
 
         if age < 18:
             yield say('Навык доступен только для людей не младше 18 лет, сорри :(',
@@ -88,36 +84,32 @@ def ask_age():
 def ask_city():
     yield say('А в каком городе ты живёшь?')
     while True:
-        command = request['command']
-
-        if names_repository.try_get_city(command) is not None:
-            return command
+        if names_repository.try_get_city(request.command) is not None:
+            return request.command
 
         yield say('Я не знаю такого города. Назови его полное название.')
 
 
 def add_tags(profile):
     yield say('Расскажи, где ты работаешь или учишься?')
-    profile['occupation'] = filter_stop_words(request['lemmas'])
+    profile['occupation'] = filter_stop_words(request.lemmas)
 
     yield say('Чем ты занимаешься в свободное время? Какие у тебя хобби?')
-    profile['hobbies'] = filter_stop_words(request['lemmas'])
+    profile['hobbies'] = filter_stop_words(request.lemmas)
 
     yield say('Какую музыку ты слушаешь? Назови пару исполнителей.')
-    profile['music'] = filter_stop_words(request['lemmas'])
+    profile['music'] = filter_stop_words(request.lemmas)
 
 
 def ask_phone():
     yield say('Отлично! Тебе осталось сообщить свой номер телефона. Начинай с "восьмёрки". ' +
               'Я проигнорирую все слова в твоей фразе, кроме чисел.')
     while True:
-        command = request['command']
-        phone = re.sub(r'\D', r'', command)
+        phone = re.sub(r'\D', r'', request.command)
 
-        yield say('Я правильно распознала твой номер телефона?')
-        lemmas = request['lemmas']
-
-        if any(w in lemmas for w in ['да', 'правильно']):
+        yield say('Я правильно распознала твой номер телефона?',
+                  suggest('Правильно', 'Давай ещё раз'))
+        if request.has_lemmas('да', 'правильно'):
             return phone
 
         yield say('Скажи свой номер ещё раз')
@@ -173,13 +165,3 @@ def load_profiles():
 
 profiles = load_profiles()
 profile_lock = threading.RLock()
-
-
-morph = pymorphy2.MorphAnalyzer()
-
-
-@skill.before_request
-def save_lemmas():
-    command = request['command'] = request['request']['command'].rstrip('.')
-    words = request['words'] = re.findall(r'[\w-]+', command, flags=re.UNICODE)
-    request['lemmas'] = [morph.parse(word)[0].normal_form for word in words]
